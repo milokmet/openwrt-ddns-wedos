@@ -14,10 +14,19 @@
 write_log 0 "wedos.com ddns script started"
 
 local __SUBDOMAIN __MAINDOMAIN __LOGINURL __RECORDID __RECORDTTL __RDTYPE API
+local __PARTS result data hour auth passhash
 
 API='https://api.wedos.com/wapi/json'
-__SUBDOMAIN=$(echo $domain | sed -e 's/[^\.]*\.[^\.]*$//' -e 's/\.$//' )
-__MAINDOMAIN=$(echo $domain | sed -e "s/${__SUBDOMAIN}\.//" )
+
+__PARTS=$(echo "${domain}" | tr '.' '\n')
+if [ $(echo "${__PARTS}" | wc -l) -gt 2 ] ; then
+  __SUBDOMAIN=$(echo $(echo "${__PARTS}" | head -n -2 ) | sed 's/ /./g')
+  __MAINDOMAIN=$(echo $(echo "${__PARTS}" | tail -2) | sed 's/ /./g')
+else
+  __SUBDOMAIN=""
+  __MAINDOMAIN="${domain}"
+fi
+
 
 # create authentication token
 passhash=$(printf "%s" "$password" | sha1sum | cut -d' ' -f1)
@@ -36,6 +45,10 @@ json_add_string "domain" "${__MAINDOMAIN}"
 data=$(json_dump)
 response=$($CURL -q --data-urlencode "request=${data}" -X POST $API 2>/dev/null)
 
+echo "domain: \"${domain}\", maindomain: \"${__MAINDOMAIN}\", subdomain: \"${__SUBDOMAIN}\""
+
+echo "${response}"
+
 json_load "${response}"
 if json_is_a response object && \
 	json_select response && \
@@ -48,6 +61,7 @@ then
 	while json_is_a ${i} "object" ; do
 		json_select "${i}"
 		json_get_var "name" "name"
+                echo "${name}"
 		if [ "$name" == "$__SUBDOMAIN" ]; then
 			json_get_var "__RECORDID" "ID"
 			json_get_var "__RECORDTTL" "ttl"
@@ -64,25 +78,52 @@ then
 fi
 
 if [ -z "${__RECORDID}" ]; then
-	write_log 14 "domain record not found"
-	return 1
+	# Create A record for this domain
+        write_log 0 "domain record not found, going to create it"
+        json_init
+        json_add_object "request"
+        json_add_string "user" "${username}"
+        json_add_string "auth" "${auth}"
+        json_add_string "command" "dns-row-add"
+        json_add_object "data"
+        json_add_string "domain" "${__MAINDOMAIN}"
+	json_add_string "name" "${__SUBDOMAIN}"
+        json_add_string "ttl" "300"
+        json_add_string "type" "A"
+        json_add_string "rdata" "${__IP}"
+        
+        data=$(json_dump)
+        response=$($CURL -q --data-urlencode "request=${data}" -X POST $API 2>/dev/null)
+	json_load "${response}"
+	echo "${response}"
+	if json_is_a "response" "object" && \
+		json_select "response" && \
+		json_is_a "result" "string" && \
+		json_get_var "result" "result" && \
+		[ "${result}" != "OK" ]
+	then
+		write_log 14 "Record ID not found, and dns-row-add failed with \"${result}\"."
+          	return 1
+        fi
+else
+        echo "updating data"
+	# CREATING UPDATE DATA
+	json_init
+	json_add_object "request"
+	json_add_string "user" "${username}"
+	json_add_string "auth" "${auth}"
+	json_add_string "command" "dns-row-update"
+	json_add_object "data"
+	json_add_string "row_id" "${__RECORDID}"
+	json_add_string "ttl" "${__RECORDTTL}"
+	json_add_string "rdata" "${__IP}"
+	json_add_string "domain" "${__MAINDOMAIN}"
+
+	data=$(json_dump)
+	response=$($CURL -q --data-urlencode "request=${data}" -X POST $API 2>/dev/null)
 fi
-
-# CREATING UPDATE DATA
-json_init
-json_add_object "request"
-json_add_string "user" "${username}"
-json_add_string "auth" ${auth}
-json_add_string "command" "dns-row-update"
-json_add_object "data"
-json_add_string "row_id" "${__RECORDID}"
-json_add_string "ttl" "${__RECORDTTL}"
-json_add_string "rdata" "${__IP}"
-json_add_string "domain" "${__MAINDOMAIN}"
-
-data=$(json_dump)
-response=$($CURL -q --data-urlencode "request=${data}" -X POST $API 2>/dev/null)
-
+echo "${data}"
+echo "${response}"
 json_load "${response}"
 if json_is_a response object && \
 	json_select response && \
