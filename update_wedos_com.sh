@@ -45,10 +45,6 @@ json_add_string "domain" "${__MAINDOMAIN}"
 data=$(json_dump)
 response=$($CURL -q --data-urlencode "request=${data}" -X POST $API 2>/dev/null)
 
-echo "domain: \"${domain}\", maindomain: \"${__MAINDOMAIN}\", subdomain: \"${__SUBDOMAIN}\""
-
-echo "${response}"
-
 json_load "${response}"
 if json_is_a response object && \
 	json_select response && \
@@ -61,7 +57,6 @@ then
 	while json_is_a ${i} "object" ; do
 		json_select "${i}"
 		json_get_var "name" "name"
-                echo "${name}"
 		if [ "$name" == "$__SUBDOMAIN" ]; then
 			json_get_var "__RECORDID" "ID"
 			json_get_var "__RECORDTTL" "ttl"
@@ -95,7 +90,7 @@ if [ -z "${__RECORDID}" ]; then
         data=$(json_dump)
         response=$($CURL -q --data-urlencode "request=${data}" -X POST $API 2>/dev/null)
 	json_load "${response}"
-	echo "${response}"
+
 	if json_is_a "response" "object" && \
 		json_select "response" && \
 		json_is_a "result" "string" && \
@@ -106,7 +101,6 @@ if [ -z "${__RECORDID}" ]; then
           	return 1
         fi
 else
-        echo "updating data"
 	# CREATING UPDATE DATA
 	json_init
 	json_add_object "request"
@@ -122,8 +116,7 @@ else
 	data=$(json_dump)
 	response=$($CURL -q --data-urlencode "request=${data}" -X POST $API 2>/dev/null)
 fi
-echo "${data}"
-echo "${response}"
+
 json_load "${response}"
 if json_is_a response object && \
 	json_select response && \
