@@ -1,8 +1,8 @@
 # openwrt-ddns-wedos
-Wedos Dynamic DNS script for openwrt
+Wedos Dynamic DNS script for OpenWrt
 
 ## Requirements
-For openwrt 22.03.3 libubox is libubox20220515, check whether another version of libubox is available for your openwrt version
+For OpenWrt 22.03.3 libubox is libubox20220515, check whether another version of libubox is available for your openwrt version
 ```
 $ opkg install libubox20220515
 $ opkg install curl
