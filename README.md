@@ -14,6 +14,11 @@ $ opkg install ddns-script ddns-services
 Follow [this guide to turn on WEDOS Api](https://kb.wedos.com/cs/wapi-api-rozhrani/zakladni-informace-wapi-api-rozhrani/wapi-aktivace-a-nastaveni/).
 Copy `update_wedos_com.sh` to `openwrt:/usr/lib/ddns/update_wedos_com.sh`
 
+Or 
+```
+wget -O /usr/lib/ddns/update_wedos_com.sh -q https://raw.githubusercontent.com/milokmet/openwrt-ddns-wedos/main/update_wedos_com.sh && chmod +x /usr/lib/ddns/update_wedos_com.sh
+```
+
 ## Configuration
 Example configuration `/etc/config/ddns`
 ```
